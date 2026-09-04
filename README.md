@@ -1,4 +1,4 @@
-# Controle Financeiro
+# Controle Financeiro - v2
 
 Aplicacao de controle de fluxo de caixa construida como uma API REST em Spring Boot. Este documento registra o processo de construcao, as decisoes tecnicas, os agentes e skills utilizados, os controles de observabilidade e resiliencia e as evidencias de validacao.
 
