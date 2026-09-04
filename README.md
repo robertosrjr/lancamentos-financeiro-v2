@@ -1,5 +1,7 @@
 # Controle Financeiro - v2
 
+[![Cobertura JaCoCo](https://img.shields.io/badge/cobertura-JaCoCo-blue)](#cobertura)
+
 Aplicacao de controle de fluxo de caixa construida como uma API REST em Spring Boot. Este documento registra o processo de construcao, as decisoes tecnicas, os agentes e skills utilizados, os controles de observabilidade e resiliencia e as evidencias de validacao.
 
 > Este README segue o principio de **Diligencia**: toda decisao deve partir de evidencia observavel, declarar suas premissas, registrar riscos e ser validada por uma verificacao executavel sempre que possivel.
@@ -305,7 +307,11 @@ Validar o pacote completo:
 mvn clean verify -Djacoco.skip=false
 ```
 
-Relatorio JaCoCo:
+### Cobertura
+
+[![Relatorio JaCoCo](https://img.shields.io/badge/relat%C3%B3rio-JaCoCo-blue)](application/target/site/jacoco/index.html)
+
+O percentual nao e fixado no README enquanto nao houver publicacao automatica do relatorio em CI. Gere a cobertura localmente com:
 
 ```text
 application/target/site/jacoco/index.html
