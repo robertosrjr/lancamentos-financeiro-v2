@@ -1,9 +1,9 @@
 # Controle Financeiro - v2
 
 [![Cobertura JaCoCo](https://img.shields.io/badge/cobertura-JaCoCo-blue)](#cobertura)
-[![Claude](https://img.shields.io/badge/claude-orange)](#AI))
-[![Java](https://img.shields.io/badge/java-red)](#JAVA))
-[![Java](https://img.shields.io/badge/spring%20boot-green)](#Spring-Boot))
+[![AI Claude](https://img.shields.io/badge/claude-orange)](#AI)
+[![Java](https://img.shields.io/badge/java-red)](#JAVA)
+[![Java](https://img.shields.io/badge/spring%20boot-green)](#Spring-Boot)
 
 Aplicacao de controle de fluxo de caixa construida como uma API REST em Spring Boot. Este documento registra o processo de construcao, as decisoes tecnicas, os agentes e skills utilizados, os controles de observabilidade e resiliencia e as evidencias de validacao.
 
