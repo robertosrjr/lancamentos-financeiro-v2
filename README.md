@@ -1,7 +1,6 @@
 # Controle Financeiro - v2
 
-[![Cobertura JaCoCo](https://img.shields.io/badge/cobertura-JaCoCo-blue)](#cobertura) | ![Claude](https://img.shields.io/badge/claude-%23D97757.svg?style=for-the-badge&logo=claude&logoColor=white))
-
+[![Cobertura JaCoCo](https://img.shields.io/badge/cobertura-JaCoCo-blue)](#cobertura)
 Aplicacao de controle de fluxo de caixa construida como uma API REST em Spring Boot. Este documento registra o processo de construcao, as decisoes tecnicas, os agentes e skills utilizados, os controles de observabilidade e resiliencia e as evidencias de validacao.
 
 > Este README segue o principio de **Diligencia**: toda decisao deve partir de evidencia observavel, declarar suas premissas, registrar riscos e ser validada por uma verificacao executavel sempre que possivel.
