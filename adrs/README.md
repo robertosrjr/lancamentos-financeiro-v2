@@ -7,3 +7,4 @@ ADRs da aplicacao `controle-financeiro`.
 - [ADR-0003: Protecoes de Resiliencia na Entrada HTTP](0003-http-resilience-guards.md)
 - [ADR-0004: Idempotencia no Registro e Chave do Outbox](0004-idempotency-and-outbox-key.md)
 - [ADR-0005: Minimizacao de Dados Pessoais na Telemetria](0005-lgpd-telemetry-data-minimization.md)
+- [ADR-0006: Estrategia de Testes, Regras Arquiteturais e Cobertura](0006-test-strategy-and-coverage.md)

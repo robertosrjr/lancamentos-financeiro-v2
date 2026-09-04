@@ -89,4 +89,55 @@ class LancamentoControllerTest {
             .andExpect(jsonPath("$[0].id").exists())
             .andExpect(jsonPath("$[0].status").value(StatusLancamento.ATIVO.name()));
     }
+
+    @Test
+    void should_find_lancamento_by_id() throws Exception {
+        UUID id = UUID.randomUUID();
+        Lancamento lancamento = lancamento(id, TipoLancamento.CREDITO, "Venda");
+        given(consultarLancamentosUseCase.buscarPorId(id)).willReturn(lancamento);
+
+        mockMvc.perform(get("/api/v1/lancamentos/{id}", id))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(id.toString()))
+            .andExpect(jsonPath("$.tipo").value("CREDITO"));
+    }
+
+    @Test
+    void should_create_reversal() throws Exception {
+        UUID originalId = UUID.randomUUID();
+        Lancamento reversal = lancamento(UUID.randomUUID(), TipoLancamento.DEBITO, "Estorno");
+        given(estornarLancamentoUseCase.estornar(originalId)).willReturn(reversal);
+
+        mockMvc.perform(post("/api/v1/lancamentos/{id}/estorno", originalId))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.tipo").value("DEBITO"))
+            .andExpect(jsonPath("$.descricao").value("Estorno"));
+    }
+
+    @Test
+    void should_reject_invalid_json_payload() throws Exception {
+        mockMvc = MockMvcBuilders.standaloneSetup(
+            new LancamentoController(
+                registrarLancamentoUseCase,
+                consultarLancamentosUseCase,
+                estornarLancamentoUseCase
+            )
+        ).setControllerAdvice(new GlobalExceptionHandler()).build();
+
+        mockMvc.perform(post("/api/v1/lancamentos")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"tipo\":\"CREDITO\",\"valor\":-1,\"data\":\"invalid\"}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    private Lancamento lancamento(UUID id, TipoLancamento tipo, String descricao) {
+        return new Lancamento(
+            id,
+            tipo,
+            new Money(new BigDecimal("150.00"), java.util.Currency.getInstance("BRL")),
+            LocalDate.now(),
+            descricao,
+            "Vendas"
+        );
+    }
 }

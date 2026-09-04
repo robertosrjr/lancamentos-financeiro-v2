@@ -19,6 +19,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -98,6 +102,43 @@ class RegistrarLancamentoUseCaseImplTest {
         Lancamento replay = useCase.registrar(command);
 
         assertThat(replay).isSameAs(first);
+        assertThat(repository.saved).hasSize(1);
+        assertThat(repository.outboxEvents).hasSize(1);
+    }
+
+    @Test
+    void should_create_only_one_lancamento_when_same_command_is_registered_concurrently() throws Exception {
+        RegistrarLancamentoCommand command = new RegistrarLancamentoCommand(
+            TipoLancamento.CREDITO,
+            new BigDecimal("300.00"),
+            LocalDate.of(2026, 8, 31),
+            "Receita concorrente",
+            "Receitas",
+            "usuario-concorrente"
+        );
+        ExecutorService executor = Executors.newFixedThreadPool(8);
+        CountDownLatch ready = new CountDownLatch(8);
+        CountDownLatch start = new CountDownLatch(1);
+        List<Lancamento> results = new ArrayList<>();
+
+        for (int index = 0; index < 8; index++) {
+            executor.submit(() -> {
+                ready.countDown();
+                start.await();
+                synchronized (results) {
+                    results.add(useCase.registrar(command));
+                }
+                return null;
+            });
+        }
+
+        assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+        start.countDown();
+        executor.shutdown();
+        assertThat(executor.awaitTermination(5, TimeUnit.SECONDS)).isTrue();
+
+        assertThat(results).hasSize(8);
+        assertThat(results).allSatisfy(result -> assertThat(result).isSameAs(results.get(0)));
         assertThat(repository.saved).hasSize(1);
         assertThat(repository.outboxEvents).hasSize(1);
     }

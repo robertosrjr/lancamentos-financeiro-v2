@@ -48,7 +48,9 @@ O dominio utiliza BRL, valida dados obrigatorios e impede lancamentos com data f
 | Tracing | Micrometer Observation com OpenTelemetry/OTLP |
 | Metricas | Actuator, HTTP, resiliencia e metricas de negocio |
 | Idempotencia | Chave deterministica e replay seguro local |
-| ADRs | Cinco decisoes registradas |
+| Testes | Unitarios, MockMvc, resiliencia, metricas e ArchUnit |
+| Cobertura | JaCoCo no ciclo `verify` |
+| ADRs | Seis decisoes registradas |
 
 ## Arquitetura
 
@@ -258,7 +260,7 @@ Pre-requisitos:
 - JDK 21.
 - Maven 3.9 ou superior.
 
-Na pasta `.claude/application`:
+Na pasta `application`:
 
 ```powershell
 mvn spring-boot:run
@@ -294,7 +296,7 @@ mvn clean test
 Executar testes focados:
 
 ```powershell
-mvn "-Dtest=RegistrarLancamentoUseCaseImplTest,UseCaseConfigurationTest" test
+mvn "-Dtest=RegistrarLancamentoUseCaseImplTest,UseCaseConfigurationTest,RequestResilienceFilterTest" test
 ```
 
 Validar o pacote completo:
@@ -303,12 +305,36 @@ Validar o pacote completo:
 mvn clean verify -Djacoco.skip=false
 ```
 
+Relatorio JaCoCo:
+
+```text
+application/target/site/jacoco/index.html
+```
+
+### Estrategia de testes
+
+Os testes seguem a piramide recomendada pelo agente de QA:
+
+- **Dominio:** regras de `Money` e `Lancamento`, sem Spring.
+- **Casos de uso:** registro, consulta, estorno, erros e replay idempotente.
+- **Concorrencia:** oito chamadas simultaneas do mesmo comando produzem um unico lancamento e um unico evento outbox.
+- **Web:** controller com MockMvc para criar, listar, buscar, estornar e rejeitar payload invalido.
+- **Resiliencia:** `RequestResilienceFilterTest` verifica `429`, `413`, metricas de rejeicao e bypass de leituras.
+- **Metricas:** `LancamentoMetricsConfigurationTest` verifica gauges total e ativos com `SimpleMeterRegistry`.
+- **Arquitetura:** `ArchitectureRulesTest` usa ArchUnit para impedir dependencia do dominio em infraestrutura e Spring.
+
+O JaCoCo e executado no `verify` por meio do `jacoco-maven-plugin`. O projeto ainda nao define um limiar minimo que falhe o build; o relatorio deve ser revisado junto com os cenarios e riscos.
+
 Evidencias registradas durante a construcao:
 
 - O baseline anterior passou em compilacao e testes.
 - Os testes de idempotencia passaram com 3 testes, 0 falhas e 0 erros.
 - Os testes de configuracao e registro passaram apos a injecao de `MeterRegistry`.
 - A compilacao das classes de resiliencia e metricas passou.
+- Os testes do filtro de resiliencia passaram com 3 cenarios e zero falhas.
+- Os cenarios medios adicionaram busca, estorno, validacao HTTP e gauges de negocio.
+- Os cenarios de baixa prioridade adicionaram concorrencia de idempotencia e regras ArchUnit.
+- O JaCoCo foi configurado para gerar relatorio no ciclo `verify`.
 - O startup direto revelou que uma falha em `spring-boot:run` pode ser simplesmente a porta `8080` ocupada.
 
 ## ADRs
@@ -320,6 +346,7 @@ As decisoes arquiteturais estao em [adrs/README.md](adrs/README.md):
 - [ADR-0003: Protecoes de Resiliencia na Entrada HTTP](adrs/0003-http-resilience-guards.md)
 - [ADR-0004: Idempotencia no Registro e Chave do Outbox](adrs/0004-idempotency-and-outbox-key.md)
 - [ADR-0005: Minimizacao de Dados Pessoais na Telemetria](adrs/0005-lgpd-telemetry-data-minimization.md)
+- [ADR-0006: Estrategia de Testes, Regras Arquiteturais e Cobertura](adrs/0006-test-strategy-and-coverage.md)
 
 ## Limitacoes e proximos passos
 
@@ -328,11 +355,12 @@ As decisoes arquiteturais estao em [adrs/README.md](adrs/README.md):
 3. Criar um publicador de outbox com retry idempotente e backoff.
 4. Mover rate limiting para gateway ou armazenamento distribuido em ambiente horizontal.
 5. Calibrar os limites de 30 requisicoes por minuto e 64 KiB com trafego real.
-6. Adicionar testes especificos para rate limiting, payload excessivo e gauges.
+6. Adicionar smoke test do contexto Spring e testes de seguranca dos endpoints.
 7. Adicionar metricas de eventos outbox pendentes quando existir publicador.
 8. Configurar coleta, retencao, RBAC e auditoria da telemetria.
 9. Reavaliar a meta de Java 25: o `pom.xml` atualmente esta em Java 21.
 10. Remover ou proteger o console H2 antes de qualquer ambiente produtivo.
+11. Definir limiar JaCoCo depois de medir a cobertura real e revisar falsos incentivos.
 
 ## Licenca e contribuicao
 
