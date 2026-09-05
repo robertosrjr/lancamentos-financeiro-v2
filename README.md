@@ -24,6 +24,7 @@ Aplicacao de controle de fluxo de caixa construida como uma API REST em Spring B
 - [Seguranca](#seguranca)
 - [Como executar](#como-executar)
 - [Como validar](#como-validar)
+- [Cenarios de teste](#cenarios-de-teste)
 - [ADRs](#adrs)
 - [Limitacoes e proximos passos](#limitacoes-e-proximos-passos)
 
@@ -336,6 +337,28 @@ Os testes seguem a piramide recomendada pelo agente de QA:
 - **Arquitetura:** `ArchitectureRulesTest` usa ArchUnit para impedir dependencia do dominio em infraestrutura e Spring.
 
 O JaCoCo e executado no `verify` por meio do `jacoco-maven-plugin`. O projeto ainda nao define um limiar minimo que falhe o build; o relatorio deve ser revisado junto com os cenarios e riscos.
+
+### Cenarios de Teste de Negocio
+
+A documentacao completa de cenarios de teste esta em [testes/CENARIOS-DE-TESTE.md](testes/CENARIOS-DE-TESTE.md). Os cenarios cobrem seis dimensoes:
+
+| Dimensao | Cenarios | Foco |
+| --- | --- | --- |
+| **1. Registro de Lancamento** | 1.1 a 1.9 | Persistencia, idempotencia, validacao, concorrencia e chave SHA-256 |
+| **2. Estorno de Lancamento** | 2.1 a 2.7 | Inversao de tipo, limite de 1 nivel, marca de status ESTORNADO e rastreabilidade |
+| **3. Consulta de Lancamentos** | 3.1 a 3.4 | Busca por ID, listagem, auditoria completa (ativos e estornados) |
+| **4. Regras Monetarias (Money)** | 4.1 a 4.5 | Positividade, escala 2 casas decimais, normalizacao e idempotencia de valor |
+| **5. Catalogo de Categorias** | 5.1 a 5.3 | Validacao contra catalogo fechado, normalizacao de caixa/espacos e idempotencia |
+| **6. Idempotencia e Auditoria** | 6.1 a 6.3 | Evento de outbox, replay seguro, falhas na auditoria |
+
+Todos os cenarios estao implementados e passam na suite atual (`mvn test`). A rastreabilidade aponta a classe e metodo de teste para cada um.
+
+### Riscos conhecidos sem correcao aplicada
+
+Dois riscos foram documentados e deixados para proximas iteracoes (ver ADR-0006 e testes/CENARIOS-DE-TESTE.md):
+
+1. **Concorrencia no estorno**: `EstornarLancamentoUseCaseImpl.estornar()` nao e sincronizado por `lancamentoId`. Chamadas concorrentes podem teoricamente duplicar a reversao. Registrado como item 12 em "Limitacoes e proximos passos".
+2. **Inconsistencia lancamento/outbox**: Se o evento de auditoria falhar ao salvar, o lancamento ja fica persistido. Registrado como item 6.3 e documentado em riscos, mas sem compensacao/rollback.
 
 Evidencias registradas durante a construcao:
 
