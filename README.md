@@ -24,7 +24,7 @@ Aplicacao de controle de fluxo de caixa construida como uma API REST em Spring B
 - [Seguranca](#seguranca)
 - [Como executar](#como-executar)
 - [Como validar](#como-validar)
-- [Cenarios de teste](#cenarios-de-teste)
+- [Cenarios de teste](testes/CENARIOS-DE-TESTE.md)
 - [ADRs](#adrs)
 - [Limitacoes e proximos passos](#limitacoes-e-proximos-passos)
 
