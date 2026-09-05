@@ -3,6 +3,7 @@ package com.verity.controlefinanceiro.application.usecase;
 import com.verity.controlefinanceiro.application.port.in.RegistrarLancamentoUseCase;
 import com.verity.controlefinanceiro.application.port.out.LancamentoRepository;
 import com.verity.controlefinanceiro.application.port.out.OutboxEvent;
+import com.verity.controlefinanceiro.domain.model.CategoriaLancamento;
 import com.verity.controlefinanceiro.domain.model.Lancamento;
 import com.verity.controlefinanceiro.domain.model.Money;
 import com.verity.controlefinanceiro.domain.model.StatusLancamento;
@@ -71,14 +72,15 @@ public class RegistrarLancamentoUseCaseImpl implements RegistrarLancamentoUseCas
 
     private synchronized Lancamento registrarLancamento(RegistrarLancamentoCommand command) {
         Money money = new Money(command.valor(), Currency.getInstance("BRL"));
+        String categoriaNormalizada = CategoriaLancamento.normalizar(command.categoria());
 
         String payload = String.format(
             "{\"tipo\":\"%s\",\"valor\":\"%s\",\"data\":\"%s\",\"descricao\":\"%s\",\"categoria\":\"%s\"}",
             command.tipo(),
-            command.valor(),
+            money.amount(),
             command.data(),
             command.descricao(),
-            command.categoria() == null ? "" : command.categoria()
+            categoriaNormalizada == null ? "" : categoriaNormalizada
         );
         String idempotencyKey = hash(payload + "|usuarioId=" + command.usuarioId());
 

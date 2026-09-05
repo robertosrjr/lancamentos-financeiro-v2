@@ -33,7 +33,7 @@ A API gerencia lancamentos financeiros de credito e debito, permitindo:
 - Gerar evento de outbox para o registro.
 - Expor health checks e metricas operacionais.
 
-O dominio utiliza BRL, valida dados obrigatorios e impede lancamentos com data futura.
+O dominio utiliza BRL, valida dados obrigatorios, impede lancamentos com data futura, exige valor com no maximo 2 casas decimais, restringe a categoria a um catalogo fechado e permite apenas um nivel de estorno por lancamento (ver [ADR-0007](adrs/0007-business-rules-estorno-escala-categoria.md)).
 
 ## Estado atual
 
@@ -147,6 +147,7 @@ Os arquivos em `.claude/agents` e `.claude/skills` sao definicoes declarativas e
 | `sre-observability-agent.md` | Revisao integrada de logs, metricas, tracing e confiabilidade. |
 | `resilience-checker-agent.md` | Identificacao de falhas e avaliacao de Retry, Circuit Breaker, limites e idempotencia. |
 | `lgpd-sre-compliance-agent.md` | Minimizacao, sanitizacao, menor privilegio e privacidade operacional. |
+| `tagf-business-architect-agent.md` | Modelagem de capacidades de negocio e fluxo de valor do dominio, diferenciacao Business Service/Service Offer e recomendacao das regras de negocio registradas na ADR-0007. |
 
 ### Skills
 
@@ -321,7 +322,7 @@ application/target/site/jacoco/index.html
 
 Os testes seguem a piramide recomendada pelo agente de QA:
 
-- **Dominio:** regras de `Money` e `Lancamento`, sem Spring.
+- **Dominio:** regras de `Money` (positividade e escala de 2 casas), `Lancamento` (validacao, catalogo de categoria via `CategoriaLancamento` e limite de um nivel de estorno), sem Spring.
 - **Casos de uso:** registro, consulta, estorno, erros e replay idempotente.
 - **Concorrencia:** oito chamadas simultaneas do mesmo comando produzem um unico lancamento e um unico evento outbox.
 - **Web:** controller com MockMvc para criar, listar, buscar, estornar e rejeitar payload invalido.
@@ -353,6 +354,7 @@ As decisoes arquiteturais estao em [adrs/README.md](adrs/README.md):
 - [ADR-0004: Idempotencia no Registro e Chave do Outbox](adrs/0004-idempotency-and-outbox-key.md)
 - [ADR-0005: Minimizacao de Dados Pessoais na Telemetria](adrs/0005-lgpd-telemetry-data-minimization.md)
 - [ADR-0006: Estrategia de Testes, Regras Arquiteturais e Cobertura](adrs/0006-test-strategy-and-coverage.md)
+- [ADR-0007: Governanca de Regras de Negocio - Estorno, Escala Monetaria e Categorias](adrs/0007-business-rules-estorno-escala-categoria.md)
 
 ## Limitacoes e proximos passos
 
@@ -367,6 +369,8 @@ As decisoes arquiteturais estao em [adrs/README.md](adrs/README.md):
 9. Reavaliar a meta de Java 25: o `pom.xml` atualmente esta em Java 21.
 10. Remover ou proteger o console H2 antes de qualquer ambiente produtivo.
 11. Definir limiar JaCoCo depois de medir a cobertura real e revisar falsos incentivos.
+12. Sincronizar `EstornarLancamentoUseCaseImpl.estornar()` por `lancamentoId` para evitar reversao duplicada sob concorrencia (mesmo risco que motivou o `synchronized` no registro, ainda nao replicado no estorno).
+13. Elevar o catalogo de `CategoriaLancamento` a um dado de referencia administravel sem deploy, com um responsavel de negocio definido (ver Future Work da ADR-0007).
 
 ## Licenca e contribuicao
 

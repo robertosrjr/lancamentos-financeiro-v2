@@ -62,6 +62,17 @@ public class EstornarLancamentoUseCaseImpl implements EstornarLancamentoUseCase 
                 throw new IllegalStateException("Lançamento já foi estornado");
             }
 
+            if (original.lancamentoOrigemId() != null) {
+                logger.atWarn()
+                    .addKeyValue("event", "lancamento.reversal.rejected")
+                    .addKeyValue("lancamentoId", lancamentoId)
+                    .addKeyValue("reason", "reversal_chain_not_allowed")
+                    .log("Lancamento reversal rejected");
+                throw new IllegalStateException(
+                    "Não é permitido estornar um lançamento que já é um estorno; registre um lançamento de correção"
+                );
+            }
+
             Lancamento estorno = original.estornar();
             Lancamento saved = repository.save(estorno);
             logger.atInfo()

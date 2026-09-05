@@ -3,6 +3,7 @@ package com.verity.controlefinanceiro.application.usecase;
 import com.verity.controlefinanceiro.application.port.out.LancamentoRepository;
 import com.verity.controlefinanceiro.domain.model.Lancamento;
 import com.verity.controlefinanceiro.domain.model.Money;
+import com.verity.controlefinanceiro.domain.model.StatusLancamento;
 import com.verity.controlefinanceiro.domain.model.TipoLancamento;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,6 +54,42 @@ class ConsultarLancamentosUseCaseImplTest {
         List<Lancamento> result = useCase.listarTodos();
 
         assertThat(result).containsExactly(primeiro, segundo);
+    }
+
+    @Test
+    void should_return_empty_list_when_no_lancamentos_exist() {
+        List<Lancamento> result = useCase.listarTodos();
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void should_list_both_active_and_estornado_lancamentos_for_full_audit_history() {
+        Lancamento ativo = new Lancamento(
+            UUID.randomUUID(),
+            TipoLancamento.CREDITO,
+            new Money(new BigDecimal("200.00"), Currency.getInstance("BRL")),
+            LocalDate.of(2026, 8, 5),
+            "Receita ativa",
+            "Vendas"
+        );
+        Lancamento estornado = new Lancamento(
+            UUID.randomUUID(),
+            TipoLancamento.DEBITO,
+            new Money(new BigDecimal("80.00"), Currency.getInstance("BRL")),
+            LocalDate.of(2026, 8, 6),
+            "Despesa estornada",
+            "Compras"
+        );
+        estornado.marcarComoEstornado();
+        repository.data.add(ativo);
+        repository.data.add(estornado);
+
+        List<Lancamento> result = useCase.listarTodos();
+
+        assertThat(result).containsExactly(ativo, estornado);
+        assertThat(result).extracting(Lancamento::status)
+            .contains(StatusLancamento.ATIVO, StatusLancamento.ESTORNADO);
     }
 
     @Test

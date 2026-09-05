@@ -62,6 +62,25 @@ class EstornarLancamentoUseCaseImplTest {
     }
 
     @Test
+    void should_reject_estorno_of_an_estorno_lancamento() {
+        Lancamento original = new Lancamento(
+            UUID.randomUUID(),
+            TipoLancamento.DEBITO,
+            new Money(new BigDecimal("40.00"), Currency.getInstance("BRL")),
+            LocalDate.of(2026, 8, 12),
+            "Lançamento indevido",
+            "Compras"
+        );
+        repository.store(original);
+        Lancamento primeiroEstorno = useCase.estornar(original.id());
+        repository.store(primeiroEstorno);
+
+        assertThatThrownBy(() -> useCase.estornar(primeiroEstorno.id()))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("estorno");
+    }
+
+    @Test
     void should_throw_when_lancamento_already_estornado() {
         Lancamento original = new Lancamento(
             UUID.randomUUID(),

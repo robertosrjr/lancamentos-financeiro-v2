@@ -73,7 +73,7 @@ public class Lancamento {
         this.valor = valor;
         this.data = data;
         this.descricao = descricao;
-        this.categoria = categoria;
+        this.categoria = CategoriaLancamento.normalizar(categoria);
         this.usuarioId = usuarioId;
         this.status = status == null ? StatusLancamento.ATIVO : status;
         this.lancamentoOrigemId = lancamentoOrigemId;
@@ -85,6 +85,11 @@ public class Lancamento {
     public Lancamento estornar() {
         if (this.status == StatusLancamento.ESTORNADO) {
             throw new IllegalStateException("Lançamento já foi estornado");
+        }
+        if (this.lancamentoOrigemId != null) {
+            throw new IllegalStateException(
+                "Não é permitido estornar um lançamento que já é um estorno; registre um lançamento de correção"
+            );
         }
 
         TipoLancamento tipoEstorno = switch (this.tipo) {

@@ -45,7 +45,7 @@ class LancamentoMetricsConfigurationTest {
             new Money(new BigDecimal("10.00"), Currency.getInstance("BRL")),
             LocalDate.now(),
             "Teste",
-            "Testes",
+            "Outros",
             "usuario",
             status,
             null,

@@ -25,6 +25,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class RegistrarLancamentoUseCaseImplTest {
 
@@ -107,6 +108,165 @@ class RegistrarLancamentoUseCaseImplTest {
     }
 
     @Test
+    void should_create_distinct_lancamentos_for_different_users_with_same_payload() {
+        RegistrarLancamentoCommand commandUsuarioA = new RegistrarLancamentoCommand(
+            TipoLancamento.DEBITO,
+            new BigDecimal("99.90"),
+            LocalDate.of(2026, 8, 20),
+            "Assinatura mensal",
+            "Serviços",
+            "usuario-a"
+        );
+        RegistrarLancamentoCommand commandUsuarioB = new RegistrarLancamentoCommand(
+            TipoLancamento.DEBITO,
+            new BigDecimal("99.90"),
+            LocalDate.of(2026, 8, 20),
+            "Assinatura mensal",
+            "Serviços",
+            "usuario-b"
+        );
+
+        Lancamento lancamentoA = useCase.registrar(commandUsuarioA);
+        Lancamento lancamentoB = useCase.registrar(commandUsuarioB);
+
+        assertThat(lancamentoA.id()).isNotEqualTo(lancamentoB.id());
+        assertThat(lancamentoA.idempotencyKey()).isNotEqualTo(lancamentoB.idempotencyKey());
+        assertThat(repository.saved).hasSize(2);
+    }
+
+    @Test
+    void should_treat_corrected_value_as_new_registration_instead_of_replay() {
+        RegistrarLancamentoCommand original = new RegistrarLancamentoCommand(
+            TipoLancamento.DEBITO,
+            new BigDecimal("50.00"),
+            LocalDate.of(2026, 8, 25),
+            "Compra de suprimentos",
+            "Despesas",
+            "usuario-789"
+        );
+        RegistrarLancamentoCommand corrigido = new RegistrarLancamentoCommand(
+            TipoLancamento.DEBITO,
+            new BigDecimal("55.00"),
+            LocalDate.of(2026, 8, 25),
+            "Compra de suprimentos",
+            "Despesas",
+            "usuario-789"
+        );
+
+        Lancamento primeiro = useCase.registrar(original);
+        Lancamento segundo = useCase.registrar(corrigido);
+
+        assertThat(segundo.id()).isNotEqualTo(primeiro.id());
+        assertThat(segundo.valor().amount()).isEqualByComparingTo(new BigDecimal("55.00"));
+        assertThat(repository.saved).hasSize(2);
+    }
+
+    @Test
+    void should_reject_registration_when_value_has_more_than_two_decimal_places() {
+        RegistrarLancamentoCommand command = new RegistrarLancamentoCommand(
+            TipoLancamento.DEBITO,
+            new BigDecimal("10.999"),
+            LocalDate.of(2026, 8, 26),
+            "Compra com valor inválido",
+            "Compras",
+            "usuario-999"
+        );
+
+        assertThatThrownBy(() -> useCase.registrar(command))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("decimal");
+        assertThat(repository.saved).isEmpty();
+    }
+
+    @Test
+    void should_treat_different_decimal_scale_as_same_value_for_idempotency() {
+        RegistrarLancamentoCommand comEscalaCurta = new RegistrarLancamentoCommand(
+            TipoLancamento.DEBITO,
+            new BigDecimal("10.5"),
+            LocalDate.of(2026, 8, 28),
+            "Compra com escala diferente",
+            "Compras",
+            "usuario-escala"
+        );
+        RegistrarLancamentoCommand comEscalaLonga = new RegistrarLancamentoCommand(
+            TipoLancamento.DEBITO,
+            new BigDecimal("10.50"),
+            LocalDate.of(2026, 8, 28),
+            "Compra com escala diferente",
+            "Compras",
+            "usuario-escala"
+        );
+
+        Lancamento primeiro = useCase.registrar(comEscalaCurta);
+        Lancamento replay = useCase.registrar(comEscalaLonga);
+
+        assertThat(replay).isSameAs(primeiro);
+        assertThat(repository.saved).hasSize(1);
+    }
+
+    @Test
+    void should_reject_registration_with_category_outside_catalog() {
+        RegistrarLancamentoCommand command = new RegistrarLancamentoCommand(
+            TipoLancamento.CREDITO,
+            new BigDecimal("30.00"),
+            LocalDate.of(2026, 8, 29),
+            "Receita com categoria inválida",
+            "Categoria Inexistente",
+            "usuario-categoria"
+        );
+
+        assertThatThrownBy(() -> useCase.registrar(command))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("catálogo");
+        assertThat(repository.saved).isEmpty();
+    }
+
+    @Test
+    void should_treat_different_category_casing_as_same_value_for_idempotency() {
+        RegistrarLancamentoCommand comCategoriaMinuscula = new RegistrarLancamentoCommand(
+            TipoLancamento.DEBITO,
+            new BigDecimal("20.00"),
+            LocalDate.of(2026, 8, 30),
+            "Compra com categoria em caixa diferente",
+            "compras",
+            "usuario-categoria-casing"
+        );
+        RegistrarLancamentoCommand comCategoriaCanonica = new RegistrarLancamentoCommand(
+            TipoLancamento.DEBITO,
+            new BigDecimal("20.00"),
+            LocalDate.of(2026, 8, 30),
+            "Compra com categoria em caixa diferente",
+            "Compras",
+            "usuario-categoria-casing"
+        );
+
+        Lancamento primeiro = useCase.registrar(comCategoriaMinuscula);
+        Lancamento replay = useCase.registrar(comCategoriaCanonica);
+
+        assertThat(replay).isSameAs(primeiro);
+        assertThat(repository.saved).hasSize(1);
+    }
+
+    @Test
+    void should_persist_lancamento_even_when_outbox_event_save_fails() {
+        RegistrarLancamentoCommand command = new RegistrarLancamentoCommand(
+            TipoLancamento.CREDITO,
+            new BigDecimal("120.00"),
+            LocalDate.of(2026, 8, 27),
+            "Receita com falha de auditoria",
+            "Receitas",
+            "usuario-outbox-falho"
+        );
+        repository.failOnNextOutboxEvent = true;
+
+        assertThatThrownBy(() -> useCase.registrar(command))
+            .isInstanceOf(RuntimeException.class);
+
+        assertThat(repository.saved).hasSize(1);
+        assertThat(repository.outboxEvents).isEmpty();
+    }
+
+    @Test
     void should_create_only_one_lancamento_when_same_command_is_registered_concurrently() throws Exception {
         RegistrarLancamentoCommand command = new RegistrarLancamentoCommand(
             TipoLancamento.CREDITO,
@@ -147,6 +307,7 @@ class RegistrarLancamentoUseCaseImplTest {
         private final List<Lancamento> saved = new ArrayList<>();
         private final Map<UUID, Lancamento> byId = new HashMap<>();
         private final List<OutboxEvent> outboxEvents = new ArrayList<>();
+        private boolean failOnNextOutboxEvent = false;
 
         @Override
         public Lancamento save(Lancamento lancamento) {
@@ -167,6 +328,10 @@ class RegistrarLancamentoUseCaseImplTest {
 
         @Override
         public OutboxEvent saveOutboxEvent(OutboxEvent event) {
+            if (failOnNextOutboxEvent) {
+                failOnNextOutboxEvent = false;
+                throw new RuntimeException("Falha simulada ao publicar evento de auditoria");
+            }
             outboxEvents.add(event);
             return event;
         }
